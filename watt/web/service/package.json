@@ -1,0 +1,11 @@
+{
+  "name": "service",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "start-platformatic-node"
+  },
+  "dependencies": {
+    "@platformatic/node": "^2.70.0"
+  }
+}

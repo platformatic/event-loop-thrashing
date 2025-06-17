@@ -1,0 +1,26 @@
+{
+  "name": "watt",
+  "workspaces": [
+    "web/*"
+  ],
+  "scripts": {
+    "dev": "wattpm dev",
+    "build": "wattpm build",
+    "start": "wattpm start",
+    "demo": "autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3042",
+    "demo-ssr": "autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3042/ssr"
+  },
+  "devDependencies": {
+    "autocannon": "^8.0.0",
+    "borp": "^0.20.0",
+    "fastify": "^5.0.0"
+  },
+  "dependencies": {
+    "@platformatic/runtime": "^2.70.0",
+    "platformatic": "^2.70.0",
+    "wattpm": "^2.70.0"
+  },
+  "engines": {
+    "node": "^18.8.0 || >=20.6.0"
+  }
+}

@@ -13,26 +13,35 @@ const server = fastify()
 const pool = new Piscina({
   filename: join(__dirname, 'cpu-worker.js'),
   maxThreads: 4,
-  // maxQueue: 'auto'
+  maxQueue: 'auto'
 })
 
 server.get('/', async (request, reply) => {
   // Simulate a database query
   await sleep(10)
 
-  // Process CPU intensive work in worker thread
-  try {
-    const result = await pool.run(20)
-    return {
-      message: 'Hello World',
-      processed: true,
-      threadResult: result
+  if (pool.queueSize < pool.options.maxQueue) {
+    // Process CPU intensive work in worker thread
+    try {
+      const result = await pool.run(20)
+      return {
+        message: 'Hello World',
+        processed: true,
+        threadResult: result
+      }
+    } catch (error) {
+      return {
+        message: 'Hello World',
+        processed: false,
+        error: 'Worker failed'
+      }
     }
-  } catch (error) {
+  } else {
+    // Return cached/simplified response when queue is full
     return {
       message: 'Hello World',
       processed: false,
-      error: 'Worker failed'
+      reason: 'Queue full - skipped processing'
     }
   }
 })

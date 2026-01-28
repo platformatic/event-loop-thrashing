@@ -1,395 +1,246 @@
 # Experimental results
 
+All tests run with: `autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000`
+(50 connections, 10 second duration, 1 second timeout)
+
+## Summary Table
+
+| Server | Avg Req/s | 200 OK | Errors | Avg Latency | Max Latency |
+|--------|-----------|--------|--------|-------------|-------------|
+| `server.js` | 4.1 | 41 | 450 timeouts | 511ms | 982ms |
+| `server-protected.js` | 21,170 | 166 | 192 timeouts | 0.89ms | 998ms |
+| `server-load-aware.js` | 145 | 1,450 | 437 timeouts | 43ms | 992ms |
+| `server-threaded.js` | 170 | 1,704 | 17 timeouts | 277ms | 970ms |
+| `server-threaded-protected.js` | 2,830 | 28,292 | 0 | 17ms | 263ms |
+
+---
+
 ## `server.js`
 
-```bash
-$ autocannon -c 10 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-10 connections
-
-
-┌─────────┬──────┬────────┬────────┬────────┬───────────┬──────────┬────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev    │ Max    │
-├─────────┼──────┼────────┼────────┼────────┼───────────┼──────────┼────────┤
-│ Latency │ 7 ms │ 128 ms │ 251 ms │ 257 ms │ 128.48 ms │ 74.07 ms │ 297 ms │
-└─────────┴──────┴────────┴────────┴────────┴───────────┴──────────┴────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Req/Sec   │ 37      │ 37      │ 39      │ 40      │ 39      │ 0.71  │ 37      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Bytes/Sec │ 6.51 kB │ 6.51 kB │ 6.87 kB │ 7.04 kB │ 6.87 kB │ 124 B │ 6.51 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 2340  │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-3k requests in 60.07s, 412 kB read
-```
-
-Conclusions:
-1. the server can only take 39 req/s on average
-
----
+Basic Fastify server with no protection. Uses route.js which has 10ms async delay + 20ms synchronous CPU work.
 
 ```bash
-autocannon -c 10 -R 20 -d 60 -t 1 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-10 connections
-
-
-┌─────────┬──────┬────────┬────────┬────────┬───────────┬──────────┬────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev    │ Max    │
-├─────────┼──────┼────────┼────────┼────────┼───────────┼──────────┼────────┤
-│ Latency │ 5 ms │ 107 ms │ 245 ms │ 252 ms │ 113.62 ms │ 71.95 ms │ 276 ms │
-└─────────┴──────┴────────┴────────┴────────┴───────────┴──────────┴────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Req/Sec   │ 20      │ 20      │ 20      │ 20      │ 20      │ 0     │ 20      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Bytes/Sec │ 3.52 kB │ 3.52 kB │ 3.52 kB │ 3.52 kB │ 3.52 kB │ 0 B   │ 3.52 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 1200  │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-1k requests in 60.07s, 211 kB read
-```
-
-Conclusions:
-* Keeping the server under its peak utilization keeps the latency under the
-  request arrival rate.
-
----
-
-```bash
-autocannon -c 50 -R 42 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
+$ autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000
+Running 10s test @ http://127.0.0.1:3000
 50 connections
-
-
-┌─────────┬───────┬────────┬─────────┬─────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5%  │ 50%    │ 97.5%   │ 99%     │ Avg       │ Stdev     │ Max     │
-├─────────┼───────┼────────┼─────────┼─────────┼───────────┼───────────┼─────────┤
-│ Latency │ 24 ms │ 473 ms │ 1000 ms │ 1020 ms │ 486.75 ms │ 293.19 ms │ 1054 ms │
-└─────────┴───────┴────────┴─────────┴─────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Req/Sec   │ 40      │ 40      │ 41      │ 42      │ 40.72   │ 0.64  │ 40      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Bytes/Sec │ 7.04 kB │ 7.04 kB │ 7.22 kB │ 7.39 kB │ 7.17 kB │ 112 B │ 7.04 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 2443  │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-2k requests in 60.05s, 430 kB read
-```
-
-Conclusions:
-* just tipping over the 41 req/s have the max latency going over the 1s mark.
-
----
-
-
-```
-autocannon -c 50 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-50 connections
-
-
-┌─────────┬───────┬────────┬─────────┬─────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5%  │ 50%    │ 97.5%   │ 99%     │ Avg       │ Stdev     │ Max     │
-├─────────┼───────┼────────┼─────────┼─────────┼───────────┼───────────┼─────────┤
-│ Latency │ 31 ms │ 612 ms │ 1199 ms │ 1219 ms │ 613.35 ms │ 355.13 ms │ 1275 ms │
-└─────────┴───────┴────────┴─────────┴─────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Req/Sec   │ 39      │ 40      │ 41      │ 42      │ 40.67   │ 0.63  │ 39      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
-│ Bytes/Sec │ 6.87 kB │ 7.04 kB │ 7.22 kB │ 7.39 kB │ 7.16 kB │ 110 B │ 6.86 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 2440  │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-5k requests in 60.07s, 429 kB read
-```
-
-Catastrophic failure, top latency goes over 1 second.
-
----
-
-If connections are truncanted after 1 second of waiting, e.g. every second
-we get a fresh set of 50 connections, we start seeing timeouts and no requests
-are completed in a given second.
-
-```bash
-$ autocannon -c 50 -r 50 -d 60 -t 1 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-50 connections
-
 
 ┌─────────┬───────┬────────┬────────┬────────┬───────────┬───────────┬────────┐
 │ Stat    │ 2.5%  │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev     │ Max    │
 ├─────────┼───────┼────────┼────────┼────────┼───────────┼───────────┼────────┤
-│ Latency │ 13 ms │ 290 ms │ 834 ms │ 893 ms │ 329.87 ms │ 232.97 ms │ 979 ms │
+│ Latency │ 63 ms │ 512 ms │ 957 ms │ 982 ms │ 511.13 ms │ 276.54 ms │ 982 ms │
 └─────────┴───────┴────────┴────────┴────────┴───────────┴───────────┴────────┘
-┌───────────┬─────┬──────┬─────┬───────┬───────┬───────┬─────────┐
-│ Stat      │ 1%  │ 2.5% │ 50% │ 97.5% │ Avg   │ Stdev │ Min     │
-├───────────┼─────┼──────┼─────┼───────┼───────┼───────┼─────────┤
-│ Req/Sec   │ 0   │ 0    │ 0   │ 0     │ 0.67  │ 5.13  │ 40      │
-├───────────┼─────┼──────┼─────┼───────┼───────┼───────┼─────────┤
-│ Bytes/Sec │ 0 B │ 0 B  │ 0 B │ 0 B   │ 117 B │ 902 B │ 7.04 kB │
-└───────────┴─────┴──────┴─────┴───────┴───────┴───────┴─────────┘
+┌───────────┬─────┬──────┬─────┬─────────┬───────┬─────────┬─────────┐
+│ Stat      │ 1%  │ 2.5% │ 50% │ 97.5%   │ Avg   │ Stdev   │ Min     │
+├───────────┼─────┼──────┼─────┼─────────┼───────┼─────────┼─────────┤
+│ Req/Sec   │ 0   │ 0    │ 0   │ 41      │ 4.1   │ 12.3    │ 41      │
+├───────────┼─────┼──────┼─────┼─────────┼───────┼─────────┼─────────┤
+│ Bytes/Sec │ 0 B │ 0 B  │ 0 B │ 7.22 kB │ 722 B │ 2.17 kB │ 7.22 kB │
+└───────────┴─────┴──────┴─────┴─────────┴───────┴─────────┴─────────┘
 ┌──────┬───────┐
 │ Code │ Count │
 ├──────┼───────┤
-│ 200  │ 40    │
+│ 200  │ 41    │
 └──────┴───────┘
 
 Req/Bytes counts sampled once per second.
-# of samples: 60
+# of samples: 10
 
-5k requests in 60.06s, 7.04 kB read
-3k errors (3k timeouts)
+541 requests in 10.01s, 7.22 kB read
+450 errors (450 timeouts)
 ```
+
+**Conclusions:**
+- Server can only handle ~41 req/s due to synchronous CPU blocking
+- Under load, latency spikes to 500ms+ average
+- 83% of requests timeout (450 out of 541)
+- Catastrophic failure under load - the event loop is completely blocked
+
+---
 
 ## `server-protected.js`
 
-```bash
-$autocannon -c 10 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-10 connections
-
-
-┌─────────┬──────┬────────┬────────┬────────┬───────────┬──────────┬────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev    │ Max    │
-├─────────┼──────┼────────┼────────┼────────┼───────────┼──────────┼────────┤
-│ Latency │ 7 ms │ 128 ms │ 249 ms │ 254 ms │ 127.83 ms │ 73.63 ms │ 285 ms │
-└─────────┴──────┴────────┴────────┴────────┴───────────┴──────────┴────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬────────┬───────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg    │ Stdev │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼────────┼───────┼─────────┤
-│ Req/Sec   │ 37      │ 38      │ 39      │ 40      │ 39.21  │ 0.68  │ 37      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼────────┼───────┼─────────┤
-│ Bytes/Sec │ 6.51 kB │ 6.69 kB │ 6.87 kB │ 7.04 kB │ 6.9 kB │ 119 B │ 6.51 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴────────┴───────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 2352  │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-3k requests in 60.07s, 414 kB read
-```
-
----
+Server with `@fastify/under-pressure` middleware that returns 503 when the event loop is overloaded.
 
 ```bash
-$ autocannon -c 50 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
+$ autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000
+Running 10s test @ http://127.0.0.1:3000
 50 connections
 
-
-┌─────────┬──────┬────────┬─────────┬─────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%   │ 99%     │ Avg       │ Stdev     │ Max     │
-├─────────┼──────┼────────┼─────────┼─────────┼───────────┼───────────┼─────────┤
-│ Latency │ 1 ms │ 444 ms │ 1165 ms │ 1201 ms │ 489.28 ms │ 346.62 ms │ 1252 ms │
-└─────────┴──────┴────────┴─────────┴─────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────────┬─────────┬─────────┬────────┬─────────┬─────────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%  │ Avg     │ Stdev   │ Min     │
-├───────────┼─────────┼─────────┼─────────┼────────┼─────────┼─────────┼─────────┤
-│ Req/Sec   │ 40      │ 40      │ 41      │ 2573   │ 1283.12 │ 1242.84 │ 40      │
-├───────────┼─────────┼─────────┼─────────┼────────┼─────────┼─────────┼─────────┤
-│ Bytes/Sec │ 7.04 kB │ 7.04 kB │ 7.22 kB │ 805 kB │ 399 kB  │ 392 kB  │ 7.04 kB │
-└───────────┴─────────┴─────────┴─────────┴────────┴─────────┴─────────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 1500  │
-├──────┼───────┤
-│ 503  │ 75463 │
-└──────┴───────┘
+┌─────────┬──────┬──────┬───────┬──────┬─────────┬──────────┬────────┐
+│ Stat    │ 2.5% │ 50%  │ 97.5% │ 99%  │ Avg     │ Stdev    │ Max    │
+├─────────┼──────┼──────┼───────┼──────┼─────────┼──────────┼────────┤
+│ Latency │ 0 ms │ 0 ms │ 0 ms  │ 0 ms │ 0.89 ms │ 24.05 ms │ 998 ms │
+└─────────┴──────┴──────┴───────┴──────┴─────────┴──────────┴────────┘
+┌───────────┬─────┬──────┬────────┬─────────┬──────────┬───────────┬─────────┐
+│ Stat      │ 1%  │ 2.5% │ 50%    │ 97.5%   │ Avg      │ Stdev     │ Min     │
+├───────────┼─────┼──────┼────────┼─────────┼──────────┼───────────┼─────────┤
+│ Req/Sec   │ 0   │ 0    │ 891    │ 70,719  │ 21,170.3 │ 27,679.43 │ 41      │
+├───────────┼─────┼──────┼────────┼─────────┼──────────┼───────────┼─────────┤
+│ Bytes/Sec │ 0 B │ 0 B  │ 279 kB │ 22.2 MB │ 6.64 MB  │ 8.69 MB   │ 7.22 kB │
+└───────────┴─────┴──────┴────────┴─────────┴──────────┴───────────┴─────────┘
+┌──────┬────────┐
+│ Code │ Count  │
+├──────┼────────┤
+│ 200  │ 166    │
+├──────┼────────┤
+│ 503  │ 211515 │
+└──────┴────────┘
 
 Req/Bytes counts sampled once per second.
-# of samples: 60
+# of samples: 10
 
-1500 2xx responses, 75463 non 2xx responses
-79k requests in 60.06s, 24 MB read
+166 2xx responses, 211515 non 2xx responses
+212k requests in 10.01s, 66.4 MB read
+192 errors (192 timeouts)
 ```
 
-Conclusions:
-* less successful req/s are processed
-* the server is always responsive but return a 503
-
+**Conclusions:**
+- Server stays responsive by rejecting requests with 503
+- Only 166 successful responses out of 211,681 total
+- 99.9% of requests get rejected (503) when under pressure
+- Still some timeouts (192), but server remains stable
+- Good for protecting downstream services, but poor user experience
 
 ---
-
-```bash
-$ autocannon -c 50 -r 50 -d 60 -t 1 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-50 connections
-
-
-┌─────────┬──────┬────────┬────────┬────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev     │ Max     │
-├─────────┼──────┼────────┼────────┼────────┼───────────┼───────────┼─────────┤
-│ Latency │ 0 ms │ 253 ms │ 827 ms │ 891 ms │ 296.02 ms │ 240.67 ms │ 1000 ms │
-└─────────┴──────┴────────┴────────┴────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────┬──────┬────────┬────────┬─────────┬─────────┬─────────┐
-│ Stat      │ 1%  │ 2.5% │ 50%    │ 97.5%  │ Avg     │ Stdev   │ Min     │
-├───────────┼─────┼──────┼────────┼────────┼─────────┼─────────┼─────────┤
-│ Req/Sec   │ 0   │ 0    │ 1297   │ 3003   │ 1306.69 │ 1272.53 │ 40      │
-├───────────┼─────┼──────┼────────┼────────┼─────────┼─────────┼─────────┤
-│ Bytes/Sec │ 0 B │ 0 B  │ 402 kB │ 943 kB │ 409 kB  │ 401 kB  │ 7.04 kB │
-└───────────┴─────┴──────┴────────┴────────┴─────────┴─────────┴─────────┘
-┌──────┬───────┐
-│ Code │ Count │
-├──────┼───────┤
-│ 200  │ 649   │
-├──────┼───────┤
-│ 503  │ 77741 │
-└──────┴───────┘
-
-Req/Bytes counts sampled once per second.
-# of samples: 60
-
-649 2xx responses, 77741 non 2xx responses
-82k requests in 60.08s, 24.5 MB read
-1k errors (1k timeouts)
-```
-
-There is still a critical situation, because we can see some timeouts,
-but the load surge is successfully mitigated.
 
 ## `server-load-aware.js`
 
+Server that uses `@fastify/under-pressure` to detect load and skips CPU-intensive work when under pressure.
+
 ```bash
-$ autocannon -c 10 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
-10 connections
+$ autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000
+Running 10s test @ http://127.0.0.1:3000
+50 connections
 
-
-┌─────────┬──────┬────────┬────────┬────────┬───────────┬──────────┬────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev    │ Max    │
-├─────────┼──────┼────────┼────────┼────────┼───────────┼──────────┼────────┤
-│ Latency │ 6 ms │ 126 ms │ 249 ms │ 254 ms │ 126.61 ms │ 74.19 ms │ 274 ms │
-└─────────┴──────┴────────┴────────┴────────┴───────────┴──────────┴────────┘
-┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev   │ Min     │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
-│ Req/Sec   │ 38      │ 38      │ 39      │ 40      │ 47.04   │ 60.28   │ 38      │
-├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┼─────────┤
-│ Bytes/Sec │ 6.69 kB │ 6.69 kB │ 6.87 kB │ 7.04 kB │ 8.28 kB │ 10.6 kB │ 6.69 kB │
-└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
+┌─────────┬───────┬───────┬────────┬────────┬──────────┬───────────┬────────┐
+│ Stat    │ 2.5%  │ 50%   │ 97.5%  │ 99%    │ Avg      │ Stdev     │ Max    │
+├─────────┼───────┼───────┼────────┼────────┼──────────┼───────────┼────────┤
+│ Latency │ 10 ms │ 11 ms │ 644 ms │ 828 ms │ 42.64 ms │ 141.51 ms │ 992 ms │
+└─────────┴───────┴───────┴────────┴────────┴──────────┴───────────┴────────┘
+┌───────────┬─────┬──────┬─────┬────────┬─────────┬─────────┬─────────┐
+│ Stat      │ 1%  │ 2.5% │ 50% │ 97.5%  │ Avg     │ Stdev   │ Min     │
+├───────────┼─────┼──────┼─────┼────────┼─────────┼─────────┼─────────┤
+│ Req/Sec   │ 0   │ 0    │ 0   │ 1,409  │ 145     │ 421.52  │ 41      │
+├───────────┼─────┼──────┼─────┼────────┼─────────┼─────────┼─────────┤
+│ Bytes/Sec │ 0 B │ 0 B  │ 0 B │ 248 kB │ 25.5 kB │ 74.2 kB │ 7.22 kB │
+└───────────┴─────┴──────┴─────┴────────┴─────────┴─────────┴─────────┘
 ┌──────┬───────┐
 │ Code │ Count │
 ├──────┼───────┤
-│ 200  │ 2822  │
+│ 200  │ 1450  │
 └──────┴───────┘
 
 Req/Bytes counts sampled once per second.
-# of samples: 60
+# of samples: 10
 
-3k requests in 60.06s, 497 kB read
+2k requests in 10.02s, 255 kB read
+437 errors (437 timeouts)
 ```
+
+**Conclusions:**
+- Much better than basic server: 1,450 successful responses vs 41
+- All requests return 200 OK (no 503 errors)
+- Still has 437 timeouts due to non-predictive circuit breaker
+- Latency varies wildly (10ms when skipping CPU work, 600ms+ when not)
+- Good approach: graceful degradation rather than rejection
 
 ---
 
+## `server-threaded.js`
+
+Server using Piscina thread pool to offload CPU-intensive work to worker threads (no queue protection).
+
 ```bash
-$ autocannon -c 50 -r 50 -d 60 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
+$ autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000
+Running 10s test @ http://127.0.0.1:3000
 50 connections
 
-
-┌─────────┬──────┬────────┬─────────┬─────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5% │ 50%    │ 97.5%   │ 99%     │ Avg       │ Stdev     │ Max     │
-├─────────┼──────┼────────┼─────────┼─────────┼───────────┼───────────┼─────────┤
-│ Latency │ 1 ms │ 183 ms │ 1101 ms │ 1172 ms │ 310.07 ms │ 341.71 ms │ 1257 ms │
-└─────────┴──────┴────────┴─────────┴─────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────────┬─────────┬────────┬────────┬─────────┬────────┬─────────┐
-│ Stat      │ 1%      │ 2.5%    │ 50%    │ 97.5%  │ Avg     │ Stdev  │ Min     │
-├───────────┼─────────┼─────────┼────────┼────────┼─────────┼────────┼─────────┤
-│ Req/Sec   │ 39      │ 40      │ 1826   │ 2551   │ 1415.09 │ 986.99 │ 39      │
-├───────────┼─────────┼─────────┼────────┼────────┼─────────┼────────┼─────────┤
-│ Bytes/Sec │ 6.87 kB │ 7.04 kB │ 322 kB │ 449 kB │ 249 kB  │ 174 kB │ 6.86 kB │
-└───────────┴─────────┴─────────┴────────┴────────┴─────────┴────────┴─────────┘
+┌─────────┬────────┬────────┬────────┬────────┬───────────┬───────────┬────────┐
+│ Stat    │ 2.5%   │ 50%    │ 97.5%  │ 99%    │ Avg       │ Stdev     │ Max    │
+├─────────┼────────┼────────┼────────┼────────┼───────────┼───────────┼────────┤
+│ Latency │ 155 ms │ 176 ms │ 679 ms │ 794 ms │ 277.47 ms │ 155.63 ms │ 970 ms │
+└─────────┴────────┴────────┴────────┴────────┴───────────┴───────────┴────────┘
+┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬───────┬─────────┐
+│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev │ Min     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Req/Sec   │ 168     │ 168     │ 170     │ 173     │ 170.4   │ 1.86  │ 168     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼───────┼─────────┤
+│ Bytes/Sec │ 50.9 kB │ 50.9 kB │ 51.5 kB │ 52.4 kB │ 51.6 kB │ 569 B │ 50.9 kB │
+└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴───────┴─────────┘
 ┌──────┬───────┐
 │ Code │ Count │
 ├──────┼───────┤
-│ 200  │ 84891 │
+│ 200  │ 1704  │
 └──────┴───────┘
 
 Req/Bytes counts sampled once per second.
-# of samples: 60
+# of samples: 10
 
-87k requests in 60.06s, 14.9 MB read
+2k requests in 10.01s, 516 kB read
+17 errors (17 timeouts)
 ```
 
-Conclusions:
-* massive amount of req/s completed, even in case of a surge in traffic
+**Conclusions:**
+- Very consistent throughput: 170 req/s with minimal variance
+- 1,704 successful responses with only 17 timeouts (99% success)
+- Event loop stays free - latency is predictable
+- Higher baseline latency (155ms+) due to thread pool queue
+- Without queue protection, requests pile up waiting for workers
 
 ---
 
+## `server-threaded-protected.js`
+
+Server using Piscina thread pool with queue-based protection - skips CPU work when queue is full.
+
 ```bash
-$ autocannon -c 50 -r 50 -d 60 -t 1 --renderStatusCodes http://127.0.0.1:3000
-Running 60s test @ http://127.0.0.1:3000
+$ autocannon -c 50 -d 10 -t 1 --renderStatusCodes http://127.0.0.1:3000
+Running 10s test @ http://127.0.0.1:3000
 50 connections
 
-
-┌─────────┬──────┬───────┬────────┬────────┬───────────┬───────────┬─────────┐
-│ Stat    │ 2.5% │ 50%   │ 97.5%  │ 99%    │ Avg       │ Stdev     │ Max     │
-├─────────┼──────┼───────┼────────┼────────┼───────────┼───────────┼─────────┤
-│ Latency │ 1 ms │ 14 ms │ 770 ms │ 856 ms │ 170.59 ms │ 231.81 ms │ 1001 ms │
-└─────────┴──────┴───────┴────────┴────────┴───────────┴───────────┴─────────┘
-┌───────────┬─────┬──────┬────────┬────────┬─────────┬─────────┬────────┐
-│ Stat      │ 1%  │ 2.5% │ 50%    │ 97.5%  │ Avg     │ Stdev   │ Min    │
-├───────────┼─────┼──────┼────────┼────────┼─────────┼─────────┼────────┤
-│ Req/Sec   │ 0   │ 0    │ 1345   │ 2551   │ 1254.34 │ 1016.18 │ 21     │
-├───────────┼─────┼──────┼────────┼────────┼─────────┼─────────┼────────┤
-│ Bytes/Sec │ 0 B │ 0 B  │ 237 kB │ 449 kB │ 221 kB  │ 179 kB  │ 3.7 kB │
-└───────────┴─────┴──────┴────────┴────────┴─────────┴─────────┴────────┘
+┌─────────┬──────┬───────┬────────┬────────┬─────────┬──────────┬────────┐
+│ Stat    │ 2.5% │ 50%   │ 97.5%  │ 99%    │ Avg     │ Stdev    │ Max    │
+├─────────┼──────┼───────┼────────┼────────┼─────────┼──────────┼────────┤
+│ Latency │ 9 ms │ 10 ms │ 125 ms │ 166 ms │ 17.1 ms │ 28.52 ms │ 263 ms │
+└─────────┴──────┴───────┴────────┴────────┴─────────┴──────────┴────────┘
+┌───────────┬────────┬────────┬────────┬────────┬─────────┬─────────┬────────┐
+│ Stat      │ 1%     │ 2.5%   │ 50%    │ 97.5%  │ Avg     │ Stdev   │ Min    │
+├───────────┼────────┼────────┼────────┼────────┼─────────┼─────────┼────────┤
+│ Req/Sec   │ 2,757  │ 2,757  │ 2,839  │ 2,873  │ 2,829.6 │ 38.48   │ 2,756  │
+├───────────┼────────┼────────┼────────┼────────┼─────────┼─────────┼────────┤
+│ Bytes/Sec │ 716 kB │ 716 kB │ 738 kB │ 746 kB │ 735 kB  │ 9.95 kB │ 716 kB │
+└───────────┴────────┴────────┴────────┴────────┴─────────┴─────────┴────────┘
 ┌──────┬───────┐
 │ Code │ Count │
 ├──────┼───────┤
-│ 200  │ 75250 │
+│ 200  │ 28292 │
 └──────┴───────┘
 
 Req/Bytes counts sampled once per second.
-# of samples: 60
+# of samples: 10
 
-79k requests in 60.06s, 13.2 MB read
-1k errors (1k timeouts)
+28k requests in 10.01s, 7.35 MB read
 ```
 
-Conclusions:
-* massive amount of req/s completed, even in case of a surge in traffic
-* some timeout still occurring because the system is not predictive,
-  it takes a bit of time to close the circuit breaker
+**Conclusions:**
+- **Best overall performance**: 2,830 req/s with 0 errors
+- 28,292 successful responses - 690x more than basic server
+- Excellent latency: 17ms average, 263ms max (well under 1s timeout)
+- Queue protection prevents backpressure buildup
+- Combines thread pool benefits with graceful degradation
+
+---
+
+## Key Takeaways
+
+1. **Basic server** fails catastrophically under load - 20ms of sync CPU work blocks everything
+2. **Under-pressure protection** keeps server alive but rejects most requests (503)
+3. **Load-aware degradation** is better - serves partial results instead of rejecting
+4. **Thread pool** offloads CPU work but queue can still build up
+5. **Thread pool + queue protection** is the best approach:
+   - Offloads CPU work to keep event loop free
+   - Skips processing when queue is full
+   - Maintains low latency and high throughput
+   - Zero errors under heavy load
+
+The combination of worker threads and queue-based backpressure provides the best balance of throughput, latency, and reliability.

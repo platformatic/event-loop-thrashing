@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schemas.platformatic.dev/@platformatic/runtime/2.70.0.json",
+  "$schema": "https://schemas.platformatic.dev/@platformatic/runtime/3.33.0.json",
   "watch": true,
   "autoload": {
     "path": "web",
@@ -14,11 +14,13 @@
     "hostname": "{PLT_SERVER_HOSTNAME}",
     "port": "{PORT}"
   },
-  "managementApi": "{PLT_MANAGEMENT_API}",
   "entrypoint": "composer",
-  "logger": {
-    "level": "error"
-  },
   "workers": "{WORKERS}",
-  "managementApi": false
+  "managementApi": false,
+  "health": {
+    "enabled": "{HEALTH_ENABLED}",
+    "interval": "{HEALTH_INTERVAL}",
+    "maxELU": "{HEALTH_MAX_ELU}",
+    "maxUnhealthyChecks": "{HEALTH_MAX_UNHEALTHY_CHECKS}"
+  }
 }

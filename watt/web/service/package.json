@@ -6,6 +6,6 @@
     "start": "start-platformatic-node"
   },
   "dependencies": {
-    "@platformatic/node": "^2.70.0"
+    "@platformatic/node": "^3.33.0"
   }
 }

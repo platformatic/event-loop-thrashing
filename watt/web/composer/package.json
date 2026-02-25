@@ -9,10 +9,10 @@
     "borp": "^0.20.0"
   },
   "dependencies": {
-    "@platformatic/composer": "^2.70.0",
-    "@platformatic/node": "^2.70.0"
+    "@platformatic/composer": "^3.33.0",
+    "@platformatic/node": "^3.33.0"
   },
   "engines": {
-    "node": "^22.14.0 || ^20.6.0"
+    "node": ">=22.19"
   }
 }

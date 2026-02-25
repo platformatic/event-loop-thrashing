@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Platformatic Runtime application designed to demonstrate event loop thrashing patterns. The application uses a microservices architecture with multiple services coordinated through a composer:
+This is a Platformatic Runtime application designed to demonstrate event loop thrashing patterns. The application uses a microservices architecture with multiple services coordinated through a gateway:
 
-- **Composer Service** (`web/composer/`): Acts as the main entry point and API gateway using Platformatic Composer
+- **Gateway Service** (`web/composer/`): Acts as the main entry point and API gateway using Platformatic Gateway
 - **Service** (`web/service/`): A Fastify-based backend service that simulates database queries and synchronous work
 - **SSR Service** (`web/ssr/`): A Next.js application for server-side rendering
 
-The runtime configuration (`watt.json`) defines the composer as the entrypoint and manages service discovery and routing.
+The runtime configuration (`watt.json`) defines the gateway as the entrypoint and manages service discovery and routing.
 
 ## Key Development Commands
 
@@ -32,7 +32,7 @@ The application demonstrates event loop behavior through:
 2. **Synchronous blocking**: CPU-intensive work using `atomic-sleep`
 3. **Load testing**: Configured autocannon tests to stress the event loop
 
-Services communicate through the Platformatic Runtime's service mesh, with the composer handling routing:
+Services communicate through the Platformatic Runtime's service mesh, with the gateway handling routing:
 - Root `/` routes to the main service
 - `/ssr` routes to the Next.js application
 

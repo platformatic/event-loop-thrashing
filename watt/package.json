@@ -16,9 +16,9 @@
     "fastify": "^5.0.0"
   },
   "dependencies": {
-    "@platformatic/runtime": "^3.33.0",
-    "platformatic": "^3.33.0",
-    "wattpm": "^3.33.0"
+    "@platformatic/runtime": "^3.39.0",
+    "platformatic": "^3.39.0",
+    "wattpm": "^3.39.0"
   },
   "engines": {
     "node": ">=22.19"
